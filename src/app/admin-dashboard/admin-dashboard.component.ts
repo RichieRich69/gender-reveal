@@ -23,28 +23,56 @@ import { Observable, combineLatest, map } from "rxjs";
           <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">🎉 Gender Reveal Controls</h2>
 
           <div *ngIf="!vm.settings?.isRevealed" class="space-y-6">
-            <p class="text-gray-600 text-center">Click a button below to reveal the gender to all participants!</p>
+            <!-- Step 1: Select Gender -->
+            <div class="text-center">
+              <p class="text-gray-600 mb-4">Step 1: Select the gender (this won't reveal it yet)</p>
+              <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  (click)="setGender('BOY')"
+                  class="px-8 py-6 rounded-2xl text-white font-bold text-xl transition-all duration-300 transform hover:scale-105 shadow-xl"
+                  [class.bg-blue-500]="vm.settings?.winningGender !== 'BOY'"
+                  [class.bg-blue-600]="vm.settings?.winningGender === 'BOY'"
+                  [class.ring-4]="vm.settings?.winningGender === 'BOY'"
+                  [class.ring-blue-300]="vm.settings?.winningGender === 'BOY'"
+                >
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">👶💙</span>
+                    <span>BOY</span>
+                    <span *ngIf="vm.settings?.winningGender === 'BOY'" class="text-sm">✓ Selected</span>
+                  </div>
+                </button>
 
-            <div class="flex flex-col sm:flex-row gap-6 justify-center">
+                <button
+                  (click)="setGender('GIRL')"
+                  class="px-8 py-6 rounded-2xl text-white font-bold text-xl transition-all duration-300 transform hover:scale-105 shadow-xl"
+                  [class.bg-pink-500]="vm.settings?.winningGender !== 'GIRL'"
+                  [class.bg-pink-600]="vm.settings?.winningGender === 'GIRL'"
+                  [class.ring-4]="vm.settings?.winningGender === 'GIRL'"
+                  [class.ring-pink-300]="vm.settings?.winningGender === 'GIRL'"
+                >
+                  <div class="flex flex-col items-center gap-2">
+                    <span class="text-4xl">👶💗</span>
+                    <span>GIRL</span>
+                    <span *ngIf="vm.settings?.winningGender === 'GIRL'" class="text-sm">✓ Selected</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2: Reveal Button -->
+            <div class="text-center pt-6 border-t border-gray-200">
+              <p class="text-gray-600 mb-4">Step 2: When ready, reveal to all participants!</p>
               <button
-                (click)="revealGender('BOY')"
-                class="px-12 py-8 rounded-2xl text-white font-bold text-2xl bg-blue-500 hover:bg-blue-600 transition-all duration-300 transform hover:scale-105 shadow-xl"
+                (click)="triggerReveal()"
+                [disabled]="!vm.settings?.winningGender"
+                class="px-12 py-6 rounded-2xl text-white font-bold text-2xl bg-gradient-to-r from-blue-500 to-pink-500 hover:from-blue-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 <div class="flex flex-col items-center gap-2">
-                  <span class="text-5xl">👶💙</span>
-                  <span>REVEAL BOY</span>
+                  <span class="text-4xl">🎉</span>
+                  <span>REVEAL NOW!</span>
                 </div>
               </button>
-
-              <button
-                (click)="revealGender('GIRL')"
-                class="px-12 py-8 rounded-2xl text-white font-bold text-2xl bg-pink-500 hover:bg-pink-600 transition-all duration-300 transform hover:scale-105 shadow-xl"
-              >
-                <div class="flex flex-col items-center gap-2">
-                  <span class="text-5xl">👶💗</span>
-                  <span>REVEAL GIRL</span>
-                </div>
-              </button>
+              <p *ngIf="!vm.settings?.winningGender" class="text-orange-600 text-sm mt-2">⚠️ Please select a gender first</p>
             </div>
           </div>
 
@@ -170,7 +198,7 @@ export class AdminDashboardComponent {
       participants,
       stats,
       settings,
-    }))
+    })),
   );
 
   newEmail = "";
@@ -205,6 +233,27 @@ export class AdminDashboardComponent {
       try {
         await this.firestore.triggerReveal(gender);
         alert(`🎉 The reveal has been triggered! It's a ${genderText}!`);
+      } catch (error: any) {
+        console.error("Error triggering reveal:", error);
+        alert(`Failed to trigger reveal: ${error.message}`);
+      }
+    }
+  }
+
+  async setGender(gender: "BOY" | "GIRL") {
+    try {
+      await this.firestore.setWinningGender(gender);
+    } catch (error: any) {
+      console.error("Error setting gender:", error);
+      alert(`Failed to set gender: ${error.message}`);
+    }
+  }
+
+  async triggerReveal() {
+    if (confirm("Are you sure you want to reveal the gender now? This will be visible to all participants!")) {
+      try {
+        await this.firestore.reveal();
+        alert("🎉 The reveal has been triggered!");
       } catch (error: any) {
         console.error("Error triggering reveal:", error);
         alert(`Failed to trigger reveal: ${error.message}`);

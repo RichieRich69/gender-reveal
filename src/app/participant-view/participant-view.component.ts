@@ -37,7 +37,8 @@ import { Participant } from "../models/user.model";
           </div>
 
           <!-- Vote Dashboard Component -->
-          <app-vote-dashboard [settings]="vm.settings" [currentParticipant]="vm.currentParticipant" [participants]="vm.participants" [stats]="vm.stats" [onCastVote]="castVoteFn"> </app-vote-dashboard>
+          <app-vote-dashboard [settings]="vm.settings" [currentParticipant]="vm.currentParticipant" [participants]="vm.participants" [stats]="vm.stats" [onCastVote]="castVoteFn" [onReveal]="revealFn">
+          </app-vote-dashboard>
         </div>
       </div>
     </div>
@@ -52,6 +53,7 @@ export class ParticipantViewComponent {
 
   // Bind the castVote function to be passed to child component
   castVoteFn = this.castVote.bind(this);
+  revealFn = this.triggerReveal.bind(this);
 
   // View Model
   vm$ = this.user$.pipe(
@@ -63,11 +65,11 @@ export class ParticipantViewComponent {
         user: of(user),
         settings: this.firestore.getSettings().pipe(
           tap((s: any) => console.log("Settings:", s)),
-          startWith(null)
+          startWith(null),
         ),
         participants: this.firestore.getParticipants().pipe(
           tap((p: any) => console.log("Participants:", p?.length)),
-          startWith([])
+          startWith([]),
         ),
         stats: this.firestore.getStats().pipe(startWith(null)),
         isAdmin: this.auth.isAdmin(user.email).pipe(startWith(false)),
@@ -80,9 +82,9 @@ export class ParticipantViewComponent {
             currentParticipant,
           };
         }),
-        tap((vm: any) => console.log("VM:", vm))
+        tap((vm: any) => console.log("VM:", vm)),
       );
-    })
+    }),
   );
 
   getAvatarUrl(name: string | null | undefined): string {
@@ -110,6 +112,14 @@ export class ParticipantViewComponent {
     } catch (error: any) {
       console.error("Error casting vote:", error);
       alert("Something went wrong: " + error.message);
+    }
+  }
+
+  async triggerReveal() {
+    try {
+      await this.firestore.reveal();
+    } catch (error: any) {
+      console.error("Error triggering reveal:", error);
     }
   }
 }

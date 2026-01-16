@@ -64,6 +64,18 @@ export class FirestoreService {
     return setDoc(ref, { isRevealed: true, winningGender: gender }, { merge: true });
   }
 
+  // Set winning gender without revealing (admin only)
+  async setWinningGender(gender: "BOY" | "GIRL"): Promise<void> {
+    const ref = doc(this.firestore, "settings/global");
+    return setDoc(ref, { winningGender: gender }, { merge: true });
+  }
+
+  // Trigger reveal (uses pre-set gender)
+  async reveal(): Promise<void> {
+    const ref = doc(this.firestore, "settings/global");
+    return setDoc(ref, { isRevealed: true }, { merge: true });
+  }
+
   // Reset the reveal (admin only)
   async resetReveal(): Promise<void> {
     const ref = doc(this.firestore, "settings/global");
@@ -98,7 +110,7 @@ export class FirestoreService {
           boyPercentage: totalVotes > 0 ? Math.round((boyVotes / totalVotes) * 100) : 0,
           girlPercentage: totalVotes > 0 ? Math.round((girlVotes / totalVotes) * 100) : 0,
         };
-      })
+      }),
     );
   }
 }

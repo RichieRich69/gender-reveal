@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnChanges, SimpleChanges } from "@angular/core";
 import { CommonModule } from "@angular/common";
+import { DomSanitizer, SafeResourceUrl } from "@angular/platform-browser";
 import { Participant, Settings } from "../models/user.model";
 import { VoteStats } from "../services/firestore.service";
 import confetti from "canvas-confetti";
@@ -11,8 +12,31 @@ import confetti from "canvas-confetti";
   template: `
     <!-- UI State 2: Revealed -->
     <div *ngIf="settings?.isRevealed" class="text-center">
-      <!-- Reveal Animation -->
+      <!-- Video Phase -->
+      <div *ngIf="!videoWatched" class="p-8 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">🎬 The Big Reveal!</h2>
+        <p class="text-gray-600 mb-6">Watch this special video...</p>
+
+        <div class="relative w-full" style="padding-bottom: 56.25%;">
+          <iframe
+            class="absolute top-0 left-0 w-full h-full rounded-lg"
+            [src]="videoUrl"
+            title="Gender Reveal Video"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          >
+          </iframe>
+        </div>
+
+        <button (click)="skipVideo()" class="mt-6 px-8 py-4 bg-gradient-to-r from-blue-500 to-pink-500 text-white font-bold text-xl rounded-full hover:scale-105 transition-transform shadow-lg">
+          🎉 Show Me The Gender! 🎉
+        </button>
+      </div>
+
+      <!-- Reveal Animation (after video) -->
       <div
+        *ngIf="videoWatched"
         class="p-8 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl max-w-2xl mx-auto border-4"
         [class.border-blue-500]="settings?.winningGender === 'BOY'"
         [class.border-pink-500]="settings?.winningGender === 'GIRL'"
@@ -31,7 +55,7 @@ import confetti from "canvas-confetti";
       </div>
 
       <!-- UI State 3: Scoreboard -->
-      <div class="mt-8 grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+      <div *ngIf="videoWatched" class="mt-8 grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
         <!-- Winners -->
         <div class="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6">
           <h3 class="text-2xl font-bold text-green-600 mb-4">🏆 The Winners</h3>
@@ -148,12 +172,21 @@ export class VoteDashboardComponent implements OnInit, OnChanges {
   @Input() participants: Participant[] = [];
   @Input() stats: VoteStats | null = null;
   @Input() onCastVote!: (vote: "BOY" | "GIRL") => void;
+  @Input() onReveal?: () => void;
 
   timeRemaining: { hours: number; minutes: number; seconds: number } | null = null;
   private countdownInterval: any;
 
   winners: Participant[] = [];
   others: Participant[] = [];
+
+  // Video reveal state
+  videoWatched = false;
+  videoUrl: SafeResourceUrl;
+
+  constructor(private sanitizer: DomSanitizer) {
+    this.videoUrl = this.sanitizer.bypassSecurityTrustResourceUrl("https://www.youtube.com/embed/NaWl_YmF1sc?autoplay=1&rel=0");
+  }
 
   ngOnInit() {
     this.startCountdown();
@@ -185,7 +218,7 @@ export class VoteDashboardComponent implements OnInit, OnChanges {
     const updateCountdown = () => {
       const now = new Date();
       const target = new Date();
-      target.setHours(20, 30, 0, 0); // 20:30 today
+      target.setHours(20, 24, 0, 0); // 20:06 today
 
       // If it's already past 20:30, target tomorrow
       if (now > target) {
@@ -196,6 +229,13 @@ export class VoteDashboardComponent implements OnInit, OnChanges {
 
       if (diff <= 0) {
         this.timeRemaining = null;
+        // Trigger reveal when countdown ends
+        if (this.onReveal) {
+          this.onReveal();
+        }
+        if (this.countdownInterval) {
+          clearInterval(this.countdownInterval);
+        }
         return;
       }
 
@@ -214,6 +254,11 @@ export class VoteDashboardComponent implements OnInit, OnChanges {
     if (this.onCastVote) {
       this.onCastVote(vote);
     }
+  }
+
+  skipVideo() {
+    this.videoWatched = true;
+    this.fireConfetti();
   }
 
   getAvatarUrl(name: string | null | undefined): string {
