@@ -218,7 +218,7 @@ export class VoteDashboardComponent implements OnInit, OnChanges {
     const updateCountdown = () => {
       const now = new Date();
       const target = new Date();
-      target.setHours(20, 24, 0, 0); // 20:06 today
+      target.setHours(20, 31, 0, 0); // 20:06 today
 
       // If it's already past 20:30, target tomorrow
       if (now > target) {
